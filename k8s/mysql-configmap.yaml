@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mysql-config
+data:
+  MYSQL_USER: dbuser
+  MYSQL_PASSWORD: dbpass
+  MYSQL_DATABASE: hellodb

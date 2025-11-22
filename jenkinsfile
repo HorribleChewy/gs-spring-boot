@@ -1,19 +1,55 @@
 pipeline {
     agent any
+
+    environment {
+        NEXUS_URL  = "http://nexus-service:8081"
+        NEXUS_REPO = "maven-releases"
+
+        GROUP_ID    = "com.example"
+        ARTIFACT_ID = "spring-boot-complete"
+        VERSION     = "0.0.1-SNAPSHOT"
+        PACKAGING   = "jar"
+    }
+
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/<your-username>/springboot-midterm.git'
+                git branch: 'main',
+                    url: 'https://github.com/HorribleChewy/gs-spring-boot.git'
             }
         }
+
         stage('Build') {
             steps {
                 sh './mvnw clean package -DskipTests'
             }
         }
+
         stage('Archive Artifact') {
             steps {
                 archiveArtifacts artifacts: 'target/*.jar', fingerprint: true
+            }
+        }
+
+        stage('Upload to Nexus') {
+            steps {
+                withCredentials([usernamePassword(
+                        credentialsId: 'nexus-creds',
+                        usernameVariable: 'NEXUS_USER',
+                        passwordVariable: 'NEXUS_PASS'
+                )]) {
+                    sh '''
+                    JAR_FILE=$(ls target/*.jar | head -n 1)
+
+                    echo "Uploading $JAR_FILE to Nexus..."
+
+                    GROUP_PATH=$(echo $GROUP_ID | tr '.' '/')
+
+                    curl -v -u $NEXUS_USER:$NEXUS_PASS \
+                      --upload-file "$JAR_FILE" \
+                      "$NEXUS_URL/repository/$NEXUS_REPO/$GROUP_PATH/$ARTIFACT_ID/$VERSION/$ARTIFACT_ID-$VERSION.$PACKAGING"
+                    '''
+                }
             }
         }
     }
